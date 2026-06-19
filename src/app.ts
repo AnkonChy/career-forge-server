@@ -1,11 +1,19 @@
 import express from "express";
 import dotenv from "dotenv";
 import pool from "./config/db.js";
+import resumeRoutes from "./routes/resumeRoutes.js";
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 7000;
+
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Routes
+app.use("/api/resume", resumeRoutes);
 
 // Test PostgreSQL Connection
 pool.query("SELECT NOW()", (err, res) => {
@@ -17,5 +25,5 @@ pool.query("SELECT NOW()", (err, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`App listening on port ${port}`);
+  console.log(`🚀 App listening on port ${port}`);
 });

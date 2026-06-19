@@ -18,11 +18,10 @@ export interface ResumeAnalysisResult {
   suggestions: string[];
 }
 
-/**
- * Analyzes resume text using Gemini API and returns a structured analysis.
- * @param resumeText Extracted text from the candidate's resume
- */
-export const analyzeResume = async (resumeText: string): Promise<ResumeAnalysisResult> => {
+export const analyzeResume = async (
+  fileBuffer: Buffer,
+  mimeType: string
+): Promise<ResumeAnalysisResult> => {
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY is not configured.");
   }
@@ -31,19 +30,28 @@ export const analyzeResume = async (resumeText: string): Promise<ResumeAnalysisR
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: [
-        `You are an expert ATS (Applicant Tracking System) and career coach.
-        Analyze the following resume text. Extract the candidate's name (if found), key technical and soft skills, a brief summary of their work experience, and provide 3-5 constructive suggestions to improve their resume for career growth.
-        
-        Provide the output in JSON format matching this structure:
         {
-          "name": "Candidate Name or empty string",
-          "skills": ["skill1", "skill2"],
-          "experienceSummary": "brief summary",
-          "suggestions": ["suggestion1", "suggestion2"]
-        }
-
-        Resume Text:
-        ${resumeText}`
+          parts: [
+            {
+              inlineData: {
+                data: fileBuffer.toString("base64"),
+                mimeType: mimeType,
+              },
+            },
+            {
+              text: `You are an expert ATS (Applicant Tracking System) and career coach.
+              Analyze the attached resume. Extract the candidate's name (if found), key technical and soft skills, a brief summary of their work experience, and provide 3-5 constructive suggestions to improve their resume for career growth.
+              
+              Provide the output ONLY in valid JSON format matching this exact structure:
+              {
+                "name": "Candidate Name or empty string",
+                "skills": ["skill1", "skill2"],
+                "experienceSummary": "brief summary",
+                "suggestions": ["suggestion1", "suggestion2"]
+              }`,
+            },
+          ],
+        },
       ],
       config: {
         responseMimeType: "application/json",
