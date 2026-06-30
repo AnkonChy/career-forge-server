@@ -11,11 +11,18 @@ if (!apiKey) {
 
 const ai = new GoogleGenAI(apiKey ? { apiKey } : {});
 
+export interface InterviewQuestion {
+  question: string;
+  type: 'technical' | 'behavioral';
+  idealAnswer: string;
+}
+
 export interface ResumeAnalysisResult {
   name?: string;
   skills: string[];
   experienceSummary: string;
   suggestions: string[];
+  questions: InterviewQuestion[];
 }
 
 export const analyzeResume = async (
@@ -40,14 +47,26 @@ export const analyzeResume = async (
             },
             {
               text: `You are an expert ATS (Applicant Tracking System) and career coach.
-              Analyze the attached resume. Extract the candidate's name (if found), key technical and soft skills, a brief summary of their work experience, and provide 3-5 constructive suggestions to improve their resume for career growth.
+              Analyze the attached resume. 
+              1. Extract the candidate's name (if found).
+              2. Extract key technical and soft skills.
+              3. Provide a brief summary of their work experience.
+              4. Provide 3-5 constructive suggestions to improve their resume for career growth.
+              5. Generate exactly 5 tailored interview questions (3 technical and 2 behavioral) based on the candidate's skills and experience, along with a short ideal answer for each question.
               
               Provide the output ONLY in valid JSON format matching this exact structure:
               {
                 "name": "Candidate Name or empty string",
                 "skills": ["skill1", "skill2"],
                 "experienceSummary": "brief summary",
-                "suggestions": ["suggestion1", "suggestion2"]
+                "suggestions": ["suggestion1", "suggestion2"],
+                "questions": [
+                  {
+                    "question": "What is your experience with...?",
+                    "type": "technical",
+                    "idealAnswer": "An ideal answer would mention..."
+                  }
+                ]
               }`,
             },
           ],
