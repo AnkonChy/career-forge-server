@@ -4,13 +4,12 @@ import { uploadAndAnalyzeResume } from "../controllers/resumeController.js";
 
 const router = Router();
 
-// multer কনফিগারেশন: ফাইল মেমোরিতে রাখব (ডিস্কে সেভ করব না)
 const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
   limits: {
-    fileSize: 5 * 1024 * 1024, // সর্বোচ্চ ৫ MB ফাইল আপলোড করা যাবে
+    fileSize: 5 * 1024 * 1024,
   },
   fileFilter: (_req, file, cb) => {
     if (file.mimetype === "application/pdf") {

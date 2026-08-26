@@ -29,6 +29,17 @@ export const uploadAndAnalyzeResume = async (
 
     const analysisResult = await analyzeResume(buffer, mimetype);
 
+    // 🛡️ Guardrail: Check if the uploaded file is a valid resume
+    if (!analysisResult.isValidResume) {
+      res.status(400).json({
+        success: false,
+        message:
+          analysisResult.rejectionReason ||
+          "The uploaded document is not a valid resume/CV. Please upload a professional resume.",
+      });
+      return;
+    }
+
     res.status(200).json({
       success: true,
       message: "Resume analyzed successfully.",
