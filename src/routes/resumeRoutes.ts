@@ -1,6 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
 import { uploadAndAnalyzeResume } from "../controllers/resumeController.js";
+import { rateLimit } from "express-rate-limit";
 
 const router = Router();
 
@@ -20,19 +21,34 @@ const upload = multer({
   },
 });
 
-// POST /api/resume/analyze
-// multer error handling wrapper
-router.post("/analyze", (req, res, next) => {
-  upload.single("resume")(req, res, (err: any) => {
-    if (err) {
-      console.error("❌ Multer error:", err.message);
-      return res.status(400).json({
-        success: false,
-        message: err.message || "File upload failed.",
-      });
-    }
-    next();
-  });
-}, uploadAndAnalyzeResume);
+const resumeAnalyzerLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 2, 
+  message: {
+    success: false,
+    message:
+      "Too many resume analysis requests from this IP, please try again after 15 minutes.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.post(
+  "/analyze",
+  resumeAnalyzerLimiter,
+  (req, res, next) => {
+    upload.single("resume")(req, res, (err: any) => {
+      if (err) {
+        console.error("❌ Multer error:", err.message);
+        return res.status(400).json({
+          success: false,
+          message: err.message || "File upload failed.",
+        });
+      }
+      next();
+    });
+  },
+  uploadAndAnalyzeResume,
+);
 
 export default router;
