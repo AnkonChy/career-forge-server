@@ -7,9 +7,9 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "dev": "node --watch --loader ts-node/esm src/app.ts",
+    "dev": "node --watch --loader ts-node/esm src/server.ts",
     "build": "tsc",
-    "start": "node dist/app.js",
+    "start": "node dist/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
@@ -21,7 +21,9 @@
     "express-rate-limit": "^8.7.0",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.2.0",
-    "pg": "^8.21.0"
+    "pg": "^8.21.0",
+    "sequelize": "^6.37.8",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
