@@ -2,6 +2,7 @@ import { Router } from "express";
 import multer from "multer";
 import { uploadAndAnalyzeResume } from "../controllers/resumeController.js";
 import { rateLimit } from "express-rate-limit";
+import path from "path";
 
 const router = Router();
 
@@ -13,10 +14,17 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024,
   },
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype === "application/pdf") {
+    const extName = path.extname(file.originalname).toLowerCase() === ".pdf";
+
+    const mimeType =
+      file.mimetype === "application/pdf" ||
+      file.mimetype === "application/octet-stream";
+
+    if (extName && mimeType) {
       cb(null, true);
     } else {
-      cb(new Error("Only PDF files are allowed."));
+      // cb(new Error("Only PDF files are allowed."));
+      cb(new Error(`Only PDF files are allowed. Received: ${file.mimetype}`));
     }
   },
 });

@@ -1,9 +1,9 @@
 import { Router } from "express";
-import { signin, signup, googleAuth } from "../controllers/authController.js";
 import { authLimiter } from "../middleware/rateLimiter.js";
+import { signup } from "../controllers/authController.js";
 
 const router = Router();
 
-router.post("/signin", authLimiter, signin);
+router.post("/signup", authLimiter, signup);
 
 export default router;

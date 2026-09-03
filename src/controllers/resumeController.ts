@@ -1,10 +1,10 @@
 import type { Request, Response } from "express";
 import { analyzeResume } from "../services/geminiService.js";
-
+import { fileTypeFromBuffer } from "file-type";
 
 export const uploadAndAnalyzeResume = async (
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<void> => {
   try {
     if (!req.file) {
@@ -16,8 +16,19 @@ export const uploadAndAnalyzeResume = async (
     }
 
     const { buffer, mimetype } = req.file;
+    const detectedType = await fileTypeFromBuffer(buffer);
 
-    const analysisResult = await analyzeResume(buffer, mimetype);
+    if (!detectedType || detectedType.mime !== "application/pdf") {
+      res.status(400).json({
+        success: false,
+        message:
+          "Fake or corrupted file detected. Only genuine PDF files are allowed.",
+      });
+      return;
+    }
+
+    // const analysisResult = await analyzeResume(buffer, mimetype);
+    const analysisResult = await analyzeResume(buffer, detectedType.mime);
 
     if (!analysisResult.isValidResume) {
       res.status(400).json({
