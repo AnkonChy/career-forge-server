@@ -132,11 +132,19 @@ export const login = async (req: Request, res: Response): Promise<any> => {
     user.refresh_token = hashedRefreshToken;
     await user.save();
 
-    // Set refresh token in HTTP-only cookie
+    // Set accessToken in HTTP-only cookie (15 mins)
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 15 * 60 * 1000, // 15 minutes
+    });
+
+    // Set refresh token in HTTP-only cookie (7 days)
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -160,7 +168,7 @@ export const login = async (req: Request, res: Response): Promise<any> => {
 };
 
 export const logout = async (req: Request, res: Response): Promise<any> => {
-  const token = req.cookies.refreshToken;
+  const token = req.cookies?.refreshToken;
 
   if (token) {
     try {
@@ -178,6 +186,13 @@ export const logout = async (req: Request, res: Response): Promise<any> => {
     }
   }
 
-  res.clearCookie("refreshToken");
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? ("none" as const) : ("lax" as const),
+  };
+
+  res.clearCookie("accessToken", cookieOptions);
+  res.clearCookie("refreshToken", cookieOptions);
   return res.status(200).json({ message: "Logged out successfully" });
 };

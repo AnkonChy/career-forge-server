@@ -1,20 +1,22 @@
 import type { Request, Response, NextFunction } from "express";
 import { verifyToken } from "../utils/jwt.js";
 import type { JwtPayload } from "jsonwebtoken";
-
 export interface AuthRequest extends Request {
   user?: JwtPayload | { id: number; email: string };
 }
-
 export const authenticateToken = (
   req: AuthRequest,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): any => {
   const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.startsWith("Bearer ")
-    ? authHeader.split(" ")[1]
-    : null;
+  const tokenFromHeader =
+    authHeader && authHeader.startsWith("Bearer ")
+      ? authHeader.split(" ")[1]
+      : null;
+
+  // Cookie (HttpOnly) অথবা Authorization Bearer হেডার থেকে accessToken নেওয়া
+  const token = req.cookies?.accessToken || tokenFromHeader;
 
   if (!token) {
     return res.status(401).json({
