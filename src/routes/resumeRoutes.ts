@@ -2,6 +2,7 @@ import { Router } from "express";
 import multer from "multer";
 import { uploadAndAnalyzeResume } from "../controllers/resumeController.js";
 import { rateLimit } from "express-rate-limit";
+import { authenticateToken } from "../middleware/authMiddleware.js";
 import path from "path";
 
 const router = Router();
@@ -43,6 +44,7 @@ const resumeAnalyzerLimiter = rateLimit({
 
 router.post(
   "/analyze",
+  authenticateToken,
   resumeAnalyzerLimiter,
   (req, res, next) => {
     upload.single("resume")(req, res, (err: any) => {

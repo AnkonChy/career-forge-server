@@ -2,7 +2,11 @@ import { type Request, type Response } from "express";
 import z from "zod";
 import bcrypt from "bcrypt";
 import User from "../models/User.js";
-import { generateRefreshToken, generateToken } from "../utils/jwt.js";
+import {
+  generateRefreshToken,
+  generateToken,
+  verifyRefreshToken,
+} from "../utils/jwt.js";
 
 export const signupSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters"),
@@ -153,4 +157,27 @@ export const login = async (req: Request, res: Response): Promise<any> => {
       error: error.message,
     });
   }
+};
+
+export const logout = async (req: Request, res: Response): Promise<any> => {
+  const token = req.cookies.refreshToken;
+
+  if (token) {
+    try {
+      const decoded = verifyRefreshToken(token);
+      if (decoded && typeof decoded !== "string") {
+        const user = await User.findByPk(decoded.id);
+        if (user) {
+          user.refresh_token = null;
+          await user.save();
+        }
+      }
+    } catch (error: any) {
+      // If token is invalid or expired, just proceed to clear cookie
+      console.log("Logout token verification failed:", error.message);
+    }
+  }
+
+  res.clearCookie("refreshToken");
+  return res.status(200).json({ message: "Logged out successfully" });
 };
