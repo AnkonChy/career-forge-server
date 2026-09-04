@@ -2,6 +2,7 @@ import { type Request, type Response } from "express";
 import z from "zod";
 import bcrypt from "bcrypt";
 import User from "../models/User.js";
+import { generateRefreshToken, generateToken } from "../utils/jwt.js";
 
 export const signupSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters"),
@@ -14,6 +15,11 @@ export const signupSchema = z.object({
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).+$/,
       "Password must contain uppercase, lowercase, number and special character",
     ),
+});
+
+export const loginSchema = z.object({
+  email: z.string().email("Invalid email format"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 export const signup = async (req: Request, res: Response): Promise<any> => {
   console.log("Signup form data:", req.body);
@@ -67,5 +73,84 @@ export const signup = async (req: Request, res: Response): Promise<any> => {
   } catch (err) {
     console.error("Signup error:", err);
     return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const login = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const result = loginSchema.safeParse(req.body);
+    console.log(req.body);
+
+    if (!result.success) {
+      const errors: Record<string, string> = {};
+
+      result.error.issues.forEach((err) => {
+        console.log(err);
+        const field = String(err.path[0]);
+        errors[field] = err.message;
+      });
+      return res.status(400).json({ message: "Login failed", errors: errors });
+    }
+
+    const { password } = result.data;
+    const email = result.data.email.toLowerCase();
+
+    const user = await User.findOne({ where: { email } });
+
+    if (!user) {
+      return res.status(400).json({
+        message: "Invalid email or password",
+      });
+    }
+
+    console.log(user.toJSON());
+
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.status(400).json({
+        message: "Invalid email or password",
+      });
+    }
+
+    const accessToken = generateToken({
+      id: user.id,
+      email: user.email,
+    });
+
+    const refreshToken = generateRefreshToken({
+      id: user.id,
+      email: user.email,
+    });
+
+    // Hash the refresh token before saving to DB
+    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+    user.refresh_token = hashedRefreshToken;
+    await user.save();
+
+    // Set refresh token in HTTP-only cookie
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    return res.status(200).json({
+      message: "Login successfully",
+      accessToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      },
+    });
+  } catch (error: any) {
+    console.log(error);
+    return res.status(500).json({
+      message: "Something went wrong",
+      error: error.message,
+    });
   }
 };
