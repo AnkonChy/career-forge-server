@@ -196,3 +196,23 @@ export const logout = async (req: Request, res: Response): Promise<any> => {
   res.clearCookie("refreshToken", cookieOptions);
   return res.status(200).json({ message: "Logged out successfully" });
 };
+
+export const users = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const allUsers = await User.findAll({
+      attributes: { exclude: ["password", "refresh_token"] },
+    });
+
+    return res.status(200).json({
+      message: "Users fetched successfully",
+      users: allUsers,
+    });
+  } catch (error: any) {
+    console.error("Get all users error:", error);
+    return res.status(500).json({
+      message: "Something went wrong",
+      error: error.message,
+    });
+  }
+};
+
