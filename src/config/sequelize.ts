@@ -4,6 +4,8 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+const isProduction = process.env.NODE_ENV === "production";
+
 const sequelize = new Sequelize(
   process.env.DB_NAME || "career-forge-ai",
   process.env.DB_USER || "postgres",
@@ -12,6 +14,14 @@ const sequelize = new Sequelize(
     host: process.env.DB_HOST || "localhost",
     port: parseInt(process.env.DB_PORT || "5432"),
     dialect: "postgres",
+    dialectOptions: isProduction
+      ? {
+          ssl: {
+            require: true,
+            rejectUnauthorized: false,
+          },
+        }
+      : {},
     logging: false,
   },
 );
