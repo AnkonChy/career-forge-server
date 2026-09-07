@@ -7,6 +7,7 @@ import {
   users,
   refreshAccessToken,
 } from "../controllers/authController.js";
+import { authenticateToken } from "../middleware/authMiddleware.js";
 
 const router = Router();
 
@@ -14,6 +15,6 @@ router.post("/signup", authLimiter, signup);
 router.post("/login", login);
 router.post("/logout", logout);
 router.post("/refresh", refreshAccessToken);
-router.get("/users", users);
+router.get("/users",authenticateToken, users);
 
 export default router;

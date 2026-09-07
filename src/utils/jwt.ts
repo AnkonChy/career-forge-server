@@ -20,7 +20,7 @@ export const generateRefreshToken = (
   return jwt.sign(
     { id: user.id, email: user.email },
     process.env.REFRESH_TOKEN_SECRET as string,
-    { expiresIn: rememberMe ? "5m" : "3m" },
+    { expiresIn: rememberMe ? "10m" : "4m" },
   );
 };
 
