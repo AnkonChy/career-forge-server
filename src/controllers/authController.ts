@@ -6,6 +6,7 @@ import {
   generateRefreshToken,
   generateToken,
   verifyRefreshToken,
+  verifyToken,
 } from "../utils/jwt.js";
 
 export const signupSchema = z.object({
@@ -83,6 +84,7 @@ export const signup = async (req: Request, res: Response): Promise<any> => {
 export const login = async (req: Request, res: Response): Promise<any> => {
   try {
     const result = loginSchema.safeParse(req.body);
+    const { rememberMe } = req.body;
     console.log(req.body);
 
     if (!result.success) {
@@ -122,30 +124,32 @@ export const login = async (req: Request, res: Response): Promise<any> => {
       email: user.email,
     });
 
-    const refreshToken = generateRefreshToken({
-      id: user.id,
-      email: user.email,
-    });
+    const refreshToken = generateRefreshToken(
+      { id: user.id, email: user.email },
+      rememberMe,
+    );
 
     // Hash the refresh token before saving to DB
     const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
     user.refresh_token = hashedRefreshToken;
     await user.save();
 
-    // Set accessToken in HTTP-only cookie (15 mins)
+    // Set accessToken in HTTP-only cookie (2 mins)
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 15 * 60 * 1000, // 15 minutes
+      maxAge: 2 * 60 * 1000, // 2 minutes
     });
 
-    // Set refresh token in HTTP-only cookie (7 days)
+    // Set refresh token in HTTP-only cookie
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: rememberMe
+        ? 5 * 60 * 1000 // 5 minutes (rememberMe)
+        : 3 * 60 * 1000, // 3 minutes
     });
 
     return res.status(200).json({
@@ -189,12 +193,82 @@ export const logout = async (req: Request, res: Response): Promise<any> => {
   const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? ("none" as const) : ("lax" as const),
+    sameSite:
+      process.env.NODE_ENV === "production"
+        ? ("none" as const)
+        : ("lax" as const),
   };
 
   res.clearCookie("accessToken", cookieOptions);
   res.clearCookie("refreshToken", cookieOptions);
   return res.status(200).json({ message: "Logged out successfully" });
+};
+
+export const refreshAccessToken = async (
+  req: Request,
+  res: Response,
+): Promise<any> => {
+  const refreshToken = req.cookies?.refreshToken;
+
+  if (!refreshToken) {
+    return res.status(401).json({
+      message: "No refresh token. Please log in again.",
+    });
+  }
+
+  try {
+    // Verify the refresh token JWT
+    const decoded = verifyRefreshToken(refreshToken);
+
+    if (!decoded || typeof decoded === "string") {
+      return res.status(401).json({
+        message: "Refresh token expired or invalid. Please log in again.",
+      });
+    }
+
+    // Check if user exists and refresh token matches DB
+    const user = await User.findByPk(decoded.id);
+
+    if (!user || !user.refresh_token) {
+      return res.status(401).json({
+        message: "User not found or session invalidated.",
+      });
+    }
+
+    // Verify hashed refresh token in DB matches
+    const isValid = await bcrypt.compare(refreshToken, user.refresh_token);
+
+    if (!isValid) {
+      return res.status(401).json({
+        message: "Invalid refresh token. Please log in again.",
+      });
+    }
+
+    // Generate new access token
+    const newAccessToken = generateToken({
+      id: user.id,
+      email: user.email,
+    });
+
+    // Set new accessToken cookie (2 mins)
+    res.cookie("accessToken", newAccessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 2 * 60 * 1000, // 2 minutes
+    });
+
+    return res.status(200).json({
+      message: "Access token refreshed successfully",
+      accessToken: newAccessToken,
+    });
+  } catch (error: any) {
+    console.error("Refresh token error:", error);
+    return res.status(500).json({
+      message: "Something went wrong",
+      error: error.message,
+    });
+  }
 };
 
 export const users = async (req: Request, res: Response): Promise<any> => {
@@ -215,4 +289,3 @@ export const users = async (req: Request, res: Response): Promise<any> => {
     });
   }
 };
-
