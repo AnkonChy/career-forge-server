@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import resumeRoutes from "./routes/resumeRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
+import courseRoutes from "./routes/courseRoutes.js";
 
 const app = express();
 // Allowed origins list
@@ -33,6 +34,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use("/api/resume", resumeRoutes);
+app.use("/api", courseRoutes);
 app.use("/api/auth", authRoutes);
 
 export default app;

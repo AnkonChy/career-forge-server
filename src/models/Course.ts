@@ -88,13 +88,12 @@ const Course = sequelize.define<CourseModel>(
 
     created_at: {
       type: DataTypes.DATE,
+      allowNull: false,
     },
   },
   {
     tableName: "courses",
-    timestamps: true,
-    createdAt: "created_at",
-    updatedAt: false,
+    timestamps: false,
   },
 );
 
